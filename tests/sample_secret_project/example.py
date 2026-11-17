@@ -1,0 +1,3 @@
+API_KEY = "abc123456789xyz"
+PASSWORD = "mysecret123"
+ACCESS_TOKEN = "token_123456789"
