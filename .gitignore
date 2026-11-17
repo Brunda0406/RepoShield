@@ -1,0 +1,22 @@
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Local database
+reposhield.db
+
+# Test files
+test-repository/
+test-repository.zip
+
+# Environment variables and secrets
+.env
+.env.*
+
+# IDE files
+.vscode/
