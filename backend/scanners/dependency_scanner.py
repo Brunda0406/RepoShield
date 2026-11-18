@@ -51,15 +51,32 @@ def scan_dependencies(requirements_file):
 
         data = json.loads(result.stdout)
         findings = []
+        seen = set()
 
         for dependency in data.get("dependencies", []):
 
             for vulnerability in dependency.get("vulns", []):
 
+                package = dependency.get("name")
+                version = dependency.get("version")
+                vulnerability_id = vulnerability.get("id")
+
+                # Avoid duplicate vulnerability records.
+                unique_key = (
+                    package,
+                    version,
+                    vulnerability_id
+                )
+
+                if unique_key in seen:
+                    continue
+
+                seen.add(unique_key)
+
                 findings.append({
-                    "package": dependency.get("name"),
-                    "installed_version": dependency.get("version"),
-                    "vulnerability_id": vulnerability.get("id"),
+                    "package": package,
+                    "installed_version": version,
+                    "vulnerability_id": vulnerability_id,
                     "severity": "UNKNOWN",
                     "description": vulnerability.get("description", ""),
                     "fixed_versions": vulnerability.get("fix_versions", [])
