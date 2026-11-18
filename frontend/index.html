@@ -11,6 +11,7 @@
 
 <div class="app-shell">
 
+    <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="brand">
             <div class="brand-mark">⬡</div>
@@ -45,6 +46,7 @@
         </div>
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main-area">
 
         <header class="topbar">
@@ -54,16 +56,16 @@
             </div>
 
             <div class="top-actions">
-                <span class="sample-label">Sample data</span>
+                <span class="sample-label">Live scanning</span>
                 <span>♧</span>
-                <span class="demo-user">Demo</span>
+                <span class="demo-user">RepoShield</span>
             </div>
         </header>
 
         <div class="content">
 
             <div class="notice">
-                ⓘ Demo workspace — all repositories, findings and security scores shown are sample data.
+                ⓘ Upload a repository ZIP to begin your security scan.
             </div>
 
             <!-- DASHBOARD -->
@@ -74,6 +76,7 @@
                         <h1>Security Overview</h1>
                         <p>Understand your repository's security, from code to deployment.</p>
                     </div>
+
                     <button class="primary-btn" data-go="scan">
                         Scan New Repository
                     </button>
@@ -83,26 +86,26 @@
 
                     <article class="stat-card">
                         <div class="stat-top">Security Score</div>
-                        <strong>72 <small>/ 100</small></strong>
-                        <p>+8 points from the previous scan</p>
+                        <strong id="securityScore">--</strong>
+                        <p>Waiting for your first scan</p>
                     </article>
 
                     <article class="stat-card">
                         <div class="stat-top">Critical Issues</div>
-                        <strong class="red">2</strong>
-                        <p>Prioritise these findings first</p>
+                        <strong class="red" id="criticalIssues">0</strong>
+                        <p>Critical findings detected</p>
                     </article>
 
                     <article class="stat-card">
                         <div class="stat-top">High Issues</div>
-                        <strong class="orange">5</strong>
-                        <p>Review before your next release</p>
+                        <strong class="orange" id="highIssues">0</strong>
+                        <p>High severity findings detected</p>
                     </article>
 
                     <article class="stat-card">
                         <div class="stat-top">Total Findings</div>
-                        <strong>24</strong>
-                        <p>Across 4 security scanners</p>
+                        <strong id="totalFindings">0</strong>
+                        <p>Across all security scanners</p>
                     </article>
 
                 </div>
@@ -111,10 +114,11 @@
                     <div class="panel-heading">
                         <div>
                             <h2>Recent security findings</h2>
-                            <p>api-service · latest scan</p>
+                            <p>Findings from your latest scan</p>
                         </div>
+
                         <button class="outline-btn" data-go="results">
-                            View all 24 findings
+                            View all findings
                         </button>
                     </div>
 
@@ -133,21 +137,26 @@
                 </article>
 
                 <div class="bottom-grid">
+
                     <article class="panel">
                         <div class="panel-heading">
                             <h2>Recent scan history</h2>
-                            <button class="text-btn" data-go="reports">View reports</button>
+                            <button class="text-btn" data-go="reports">
+                                View reports
+                            </button>
                         </div>
+
                         <div id="recent-history"></div>
                     </article>
 
                     <article class="panel">
-                        <h2>Start with the critical issues</h2>
-                        <p>2 findings may expose sensitive data.</p>
-                        <button class="text-btn" data-go="finding">
-                            Review critical findings →
+                        <h2>Repository security</h2>
+                        <p>Run a repository scan to identify vulnerabilities, exposed secrets and configuration risks.</p>
+                        <button class="text-btn" data-go="scan">
+                            Start a new scan →
                         </button>
                     </article>
+
                 </div>
 
             </section>
@@ -164,15 +173,16 @@
 
                     <label class="drop-zone" id="drop-zone">
                         <input type="file" id="zip-file" accept=".zip" hidden>
+
                         <span class="upload-icon">⇧</span>
                         <strong id="upload-title">Drag & drop your repository ZIP here</strong>
                         <small>or browse your computer to choose a file</small>
                         <span class="browse-btn">Browse Files</span>
-                        <small>Supported format: ZIP · Maximum size: 100 MB</small>
+                        <small>Supported format: ZIP · Maximum size: 20 MB</small>
                     </label>
 
                     <div id="selected-file" class="selected-file">
-                        api-service.zip · Sample repository
+                        No repository selected.
                     </div>
 
                     <button class="primary-btn" id="scan-button">
@@ -185,7 +195,7 @@
                 <article class="panel">
                     <h2>What gets checked?</h2>
                     <p>Four focused checks. One clear report.</p>
-                    <p>✳ Code vulnerabilities</p>
+                    <p>✳ Dependency vulnerabilities</p>
                     <p>⌕ Exposed secrets</p>
                     <p>⬡ Docker security</p>
                     <p>⑂ GitHub Actions</p>
@@ -199,42 +209,48 @@
                 <div class="page-heading">
                     <div>
                         <h1>Scan Results</h1>
-                        <p>api-service.zip · 148 files analysed</p>
+                        <p id="results-subtitle">No scans performed yet.</p>
                     </div>
+
                     <button class="primary-btn" data-go="scan">
                         Scan New Repository
                     </button>
                 </div>
 
-                <div class="success-banner">
-                    ✓ Scan completed · 4 of 4 scanners finished
-                </div>
+                <div class="success-banner" id="scan-success" hidden></div>
 
                 <div class="results-stats">
+
                     <article class="stat-card">
                         <p>Security Score</p>
-                        <strong>72 / 100</strong>
+                        <strong id="resultScore">--</strong>
                     </article>
+
                     <article class="severity-card critical">
                         <span>Critical</span>
-                        <strong>2</strong>
+                        <strong id="resultCritical">0</strong>
                     </article>
+
                     <article class="severity-card high">
                         <span>High</span>
-                        <strong>5</strong>
+                        <strong id="resultHigh">0</strong>
                     </article>
+
                     <article class="severity-card medium">
                         <span>Medium</span>
-                        <strong>9</strong>
+                        <strong id="resultMedium">0</strong>
                     </article>
+
                     <article class="severity-card low">
                         <span>Low</span>
-                        <strong>8</strong>
+                        <strong id="resultLow">0</strong>
                     </article>
+
                 </div>
 
                 <article class="panel">
                     <h2>Security findings</h2>
+
                     <table>
                         <thead>
                             <tr>
@@ -258,37 +274,12 @@
                     ← Back to scan results
                 </button>
 
-                <h1>SQL injection in database query</h1>
-                <p>Critical · Potential vulnerability · Review required</p>
+                <h1>Finding Details</h1>
+                <p>Select a finding from the scan results to review it.</p>
 
                 <article class="panel">
-                    <h2>Affected file</h2>
-                    <p>src/routes/users.py · Line 42</p>
-                </article>
-
-                <article class="panel">
-                    <h2>Why this matters</h2>
-                    <p>
-                        User-controlled input is inserted directly into a SQL query.
-                        This may allow unauthorised access to data.
-                    </p>
-                </article>
-
-                <article class="panel">
-                    <h2>Flagged code</h2>
-                    <pre>cursor.execute("SELECT * FROM users WHERE id = '" + user_id)</pre>
-                </article>
-
-                <article class="panel">
-                    <h2>Recommended solution</h2>
-                    <pre>cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))</pre>
-                </article>
-
-                <article class="panel">
-                    <h2>Finding details</h2>
-                    <p>Scanner: Code analysis</p>
-                    <p>Rule: CWE-89 · SQL injection</p>
-                    <p>Repository: api-service.zip</p>
+                    <h2>Finding information</h2>
+                    <p>Detailed finding information will be displayed here.</p>
                 </article>
 
             </section>
@@ -299,21 +290,34 @@
                 <div class="page-heading">
                     <div>
                         <h1>Reports</h1>
-                        <p>Review past scans and share security findings with your team.</p>
+                        <p>Review past scans and download security findings.</p>
                     </div>
+
                     <button class="primary-btn" data-go="scan">
                         Scan New Repository
                     </button>
                 </div>
 
                 <div class="report-summary">
-                    <div><strong>6</strong><small>completed scans</small></div>
-                    <div><strong>3</strong><small>repositories</small></div>
-                    <div><strong>18 Nov 2026</strong><small>latest scan</small></div>
+                    <div>
+                        <strong id="reportCount">0</strong>
+                        <small>completed scans</small>
+                    </div>
+
+                    <div>
+                        <strong id="repositoryCount">0</strong>
+                        <small>repositories</small>
+                    </div>
+
+                    <div>
+                        <strong id="latestScanDate">--</strong>
+                        <small>latest scan</small>
+                    </div>
                 </div>
 
                 <article class="panel">
                     <h2>Repository scan history</h2>
+
                     <table>
                         <thead>
                             <tr>
@@ -330,7 +334,7 @@
 
             </section>
 
-            <!-- OTHER SIDEBAR PAGES -->
+            <!-- SECRETS -->
             <section class="page" id="page-secrets">
                 <h1>Secrets</h1>
                 <article class="panel">
@@ -339,6 +343,7 @@
                 </article>
             </section>
 
+            <!-- DOCKER -->
             <section class="page" id="page-docker">
                 <h1>Docker Security</h1>
                 <article class="panel">
@@ -347,6 +352,7 @@
                 </article>
             </section>
 
+            <!-- GITHUB ACTIONS -->
             <section class="page" id="page-github">
                 <h1>GitHub Actions</h1>
                 <article class="panel">
@@ -355,11 +361,12 @@
                 </article>
             </section>
 
+            <!-- SETTINGS -->
             <section class="page" id="page-settings">
                 <h1>Settings</h1>
                 <article class="panel">
-                    <h2>Demo workspace</h2>
-                    <p>Workspace preferences.</p>
+                    <h2>Workspace settings</h2>
+                    <p>RepoShield local workspace preferences.</p>
                 </article>
             </section>
 
