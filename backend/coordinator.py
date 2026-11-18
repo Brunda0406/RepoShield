@@ -7,6 +7,7 @@ from backend.scanners.secret_scanner import scan_directory
 from backend.scanners.dependency_scanner import scan_dependencies
 from backend.scanners.docker_scanner import scan_dockerfile
 from backend.scanners.workflow_scanner import scan_workflow_directory
+from backend.scanners.compose_scanner import scan_compose
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,7 @@ def get_repository_files(root):
 
 
 def run_all_scanners(root: Path):
-    """
-    Run all available scanners on an extracted repository.
-
-    Returns findings, scanner errors and skipped scanners separately.
-    """
+    """Run all available scanners on an extracted repository."""
 
     root = Path(root).resolve()
 
@@ -67,7 +64,10 @@ def run_all_scanners(root: Path):
         if result.get("status") != "completed":
             scanner_errors.append({
                 "scanner": scanner_name,
-                "error": result.get("message", "Scanner did not complete")
+                "error": result.get(
+                    "message",
+                    "Scanner did not complete"
+                )
             })
             return
 
@@ -100,9 +100,10 @@ def run_all_scanners(root: Path):
             "error": str(error)
         })
 
-    # Find relevant repository files once
+    # Discover repository files
     try:
         repository_files = list(get_repository_files(root))
+
     except Exception as error:
         logger.exception("Repository file discovery failed")
         scanner_errors.append({
@@ -124,6 +125,7 @@ def run_all_scanners(root: Path):
     for requirements_file in requirement_files:
         try:
             result = scan_dependencies(requirements_file)
+
             process_result(
                 "Dependency Scanner",
                 result,
@@ -151,6 +153,7 @@ def run_all_scanners(root: Path):
     for dockerfile in dockerfiles:
         try:
             result = scan_dockerfile(dockerfile)
+
             process_result(
                 "Docker Scanner",
                 result,
@@ -180,6 +183,7 @@ def run_all_scanners(root: Path):
     for workflow_dir in sorted(workflow_dirs):
         try:
             result = scan_workflow_directory(workflow_dir)
+
             process_result(
                 "Workflow Scanner",
                 result
@@ -193,6 +197,38 @@ def run_all_scanners(root: Path):
                 "error": str(error)
             })
 
+    # 5. Docker Compose Scanner
+    compose_files = [
+        path for path in repository_files
+        if path.name.lower() in {
+            "docker-compose.yml",
+            "docker-compose.yaml",
+            "compose.yml",
+            "compose.yaml"
+        }
+    ]
+
+    if not compose_files:
+        skipped_scanners.append("Compose Scanner")
+
+    for compose_file in compose_files:
+        try:
+            result = scan_compose(compose_file)
+
+            process_result(
+                "Compose Scanner",
+                result,
+                compose_file
+            )
+
+        except Exception as error:
+            logger.exception("Compose Scanner failed")
+            scanner_errors.append({
+                "scanner": "Compose Scanner",
+                "file": str(compose_file),
+                "error": str(error)
+            })
+
     return {
         "findings": all_findings,
         "scanner_errors": scanner_errors,
@@ -201,10 +237,7 @@ def run_all_scanners(root: Path):
 
 
 def calculate_security_score(findings):
-    """
-    Calculate a security score between 0 and 100.
-    Higher severity findings reduce the score.
-    """
+    """Calculate a security score between 0 and 100."""
 
     deductions = {
         "Critical": 20,
