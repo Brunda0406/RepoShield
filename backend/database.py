@@ -6,8 +6,9 @@ from datetime import datetime
 
 # Database file will be created in the main RepoShield folder
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "reposhield.db"
-
+DB_DIR = BASE_DIR / "data"
+DB_DIR.mkdir(exist_ok=True)
+DB_PATH = DB_DIR / "reposhield.db"
 
 def get_connection():
     connection = sqlite3.connect(DB_PATH)
