@@ -4,7 +4,10 @@ import subprocess
 
 from unittest.mock import patch, MagicMock
 
-from backend.scanners.dependency_scanner import scan_dependencies
+from backend.scanners.dependency_scanner import (
+    scan_dependencies,
+    get_vulnerability_severity
+)
 
 
 def mock_audit_output(vulnerabilities):
@@ -127,3 +130,59 @@ def test_invalid_json_output(mock_which, mock_run, tmp_path):
 
     assert result["status"] == "error"
     assert "parse" in result["message"].lower()
+
+
+@patch("backend.scanners.dependency_scanner.urlopen")
+def test_database_specific_severity_fallback(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value.read.return_value = json.dumps({
+        "id": "TEST-001",
+        "severity": [],
+        "database_specific": {
+            "severity": "HIGH"
+        }
+    }).encode("utf-8")
+
+    mock_urlopen.return_value = mock_response
+
+    result = get_vulnerability_severity("TEST-001")
+
+    assert result == "HIGH"
+
+
+@patch("backend.scanners.dependency_scanner.urlopen")
+def test_unknown_when_severity_unavailable(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value.read.return_value = json.dumps({
+        "id": "TEST-002",
+        "severity": [],
+        "affected": [],
+        "database_specific": {}
+    }).encode("utf-8")
+
+    mock_urlopen.return_value = mock_response
+
+    result = get_vulnerability_severity("TEST-002")
+
+    assert result == "UNKNOWN"
+
+
+@patch("backend.scanners.dependency_scanner.urlopen")
+def test_cvss_severity_lookup(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value.read.return_value = json.dumps({
+        "id": "TEST-003",
+        "severity": [
+            {
+                "type": "CVSS_V3",
+                "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+            }
+        ]
+    }).encode("utf-8")
+
+    mock_urlopen.return_value = mock_response
+
+    result = get_vulnerability_severity("TEST-003")
+
+    assert result == "CRITICAL"
+
