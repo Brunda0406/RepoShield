@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoShield | Security Scanner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h2 class="logo">🛡 RepoShield</h2>
+
+        <nav>
+            <a href="#" class="nav-link active">Dashboard</a>
+            <a href="#" class="nav-link">Scan Repository</a>
+            <a href="#" class="nav-link">Scan History</a>
+            <a href="#" class="nav-link">Settings</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <header class="header">
+            <h1>Dashboard</h1>
+            <p>Monitor repository security and identify vulnerabilities.</p>
+        </header>
+
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <h2>Scan Your Repository</h2>
+            <p>Upload your repository as a ZIP file to scan for security issues.</p>
+
+            <input type="file" id="repositoryFile" accept=".zip">
+
+            <button id="scanButton">Scan Repository</button>
+
+            <p id="scanStatus"></p>
+        </section>
+
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+
+            <div class="summary-card">
+                <h3>Security Score</h3>
+                <p id="securityScore">--</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Total Findings</h3>
+                <p id="totalFindings">--</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Scan Status</h3>
+                <p id="status">Not scanned</p>
+            </div>
+
+        </section>
+
+        <!-- Findings Table -->
+        <section class="findings-section">
+            <h2>Security Findings</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Finding</th>
+                        <th>Scanner</th>
+                        <th>Severity</th>
+                        <th>File</th>
+                    </tr>
+                </thead>
+
+                <tbody id="findingsTable">
+                    <tr>
+                        <td colspan="4">No scan results available.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
