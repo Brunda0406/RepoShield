@@ -6,6 +6,7 @@ from pathlib import Path
 from backend.scanners.secret_scanner import scan_directory
 from backend.scanners.dependency_scanner import scan_dependencies
 from backend.scanners.docker_scanner import scan_dockerfile
+from backend.scanners.compose_scanner import scan_compose
 from backend.scanners.workflow_scanner import scan_workflow_directory
 
 logger = logging.getLogger(__name__)
@@ -165,7 +166,43 @@ def run_all_scanners(root: Path):
                 "error": str(error)
             })
 
-    # 4. GitHub Workflow Scanner
+    # 4. Docker Compose Scanner
+    compose_files = [
+        path for path in repository_files
+        if (
+            path.name.lower() in {
+                "compose.yml",
+                "compose.yaml",
+                "docker-compose.yml",
+                "docker-compose.yaml"
+            }
+            or path.name.lower().startswith("compose.")
+            or path.name.lower().startswith("docker-compose.")
+        )
+        and path.suffix.lower() in {".yml", ".yaml"}
+    ]
+
+    if not compose_files:
+        skipped_scanners.append("Compose Scanner")
+
+    for compose_file in compose_files:
+        try:
+            result = scan_compose(compose_file)
+            process_result(
+                "Compose Scanner",
+                result,
+                compose_file
+            )
+
+        except Exception as error:
+            logger.exception("Compose Scanner failed")
+            scanner_errors.append({
+                "scanner": "Compose Scanner",
+                "file": str(compose_file),
+                "error": str(error)
+            })
+
+    # 5. GitHub Workflow Scanner
     workflow_dirs = {
         path.parent
         for path in repository_files
