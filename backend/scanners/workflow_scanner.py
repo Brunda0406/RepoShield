@@ -4,31 +4,32 @@ from pathlib import Path
 
 
 def scan_workflow(file_path):
-    findings = []
+    """Scan a GitHub Actions workflow for security issues."""
+
     path = Path(file_path)
 
     if not path.is_file():
-        return [{
-            "file": str(path),
-            "line": 0,
-            "issue": "Workflow file not found",
-            "severity": "Error",
-            "recommendation": "Check the file path."
-        }]
+        return {
+            "scanner": "workflow_scanner",
+            "status": "error",
+            "findings": [],
+            "message": "Workflow file not found."
+        }
 
     try:
         lines = path.read_text(
             encoding="utf-8",
             errors="ignore"
         ).splitlines()
-    except OSError:
-        return [{
-            "file": str(path),
-            "line": 0,
-            "issue": "Unable to read workflow file",
-            "severity": "Error",
-            "recommendation": "Check file permissions."
-        }]
+    except OSError as error:
+        return {
+            "scanner": "workflow_scanner",
+            "status": "error",
+            "findings": [],
+            "message": str(error)
+        }
+
+    findings = []
 
     for line_number, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -36,56 +37,175 @@ def scan_workflow(file_path):
         if not stripped or stripped.startswith("#"):
             continue
 
-        # Check for overly broad permissions
-        if re.search(r"permissions\s*:\s*write-all\b", stripped):
+        # Detect pull_request_target
+        if re.search(r"\bpull_request_target\s*:", stripped):
             findings.append({
-                "file": str(path),
+                "type": "Dangerous Pull Request Trigger",
+                "severity": "HIGH",
                 "line": line_number,
-                "issue": "Workflow uses write-all permissions",
-                "severity": "High",
-                "recommendation": "Grant only the minimum permissions required."
+                "description": (
+                    "pull_request_target can expose privileged workflow "
+                    "context to untrusted pull requests."
+                )
             })
 
-        # Check for pull_request_target
-        if re.search(r"pull_request_target\s*:", stripped):
+        # Detect unpinned GitHub Actions
+        action_match = re.search(
+            r"\buses:\s*([^\s#]+)",
+            stripped
+        )
+
+        if action_match:
+            action = action_match.group(1)
+
+            if "@" in action:
+                version = action.rsplit("@", 1)[1]
+
+                if not re.fullmatch(r"[a-fA-F0-9]{40}", version):
+                    findings.append({
+                        "type": "Unpinned GitHub Action",
+                        "severity": "MEDIUM",
+                        "line": line_number,
+                        "description": (
+                            f"Action '{action}' is not pinned "
+                            "to a full commit SHA."
+                        )
+                    })
+
+        # Detect excessive write permissions
+        if re.search(r"\bpermissions\s*:\s*write-all\b", stripped):
             findings.append({
-                "file": str(path),
+                "type": "Excessive Permissions",
+                "severity": "HIGH",
                 "line": line_number,
-                "issue": "Workflow uses pull_request_target",
-                "severity": "Medium",
-                "recommendation": "Review permissions and handling of untrusted contributions."
+                "description": (
+                    "Workflow grants write access to all "
+                    "available permissions."
+                )
             })
 
-        # Check for possible secret exposure
+        if re.fullmatch(r"write-all\s*", stripped):
+            findings.append({
+                "type": "Excessive Permissions",
+                "severity": "HIGH",
+                "line": line_number,
+                "description": (
+                    "Workflow grants write access to all "
+                    "available permissions."
+                )
+            })
+
+        # Detect individual write permissions
         if re.search(
-            r"echo\s+.*\$\{\{\s*secrets\.",
+            r"^\s*(contents|packages|actions|pull-requests|issues):\s*write\s*$",
+            line,
+            re.IGNORECASE
+        ):
+            findings.append({
+                "type": "Write Permission",
+                "severity": "MEDIUM",
+                "line": line_number,
+                "description": (
+                    "Workflow grants write permissions. "
+                    "Check whether they are necessary."
+                )
+            })
+
+        # Detect persistent checkout credentials
+        if re.search(
+            r"\bpersist-credentials\s*:\s*true\b",
             stripped,
             re.IGNORECASE
         ):
             findings.append({
-                "file": str(path),
+                "type": "Persistent Git Credentials",
+                "severity": "MEDIUM",
                 "line": line_number,
-                "issue": "Possible secret printed in workflow",
-                "severity": "High",
-                "recommendation": "Avoid printing secrets in workflow logs."
+                "description": (
+                    "Checkout credentials remain configured "
+                    "in the local Git repository."
+                )
             })
 
-        # Check whether actions are pinned to a full commit SHA
-        match = re.search(r"\buses:\s*([^\s#]+)", stripped)
+        # Detect possible secret exposure in shell commands
+        if re.search(r"\brun\s*:", stripped) and re.search(
+            r"\$\{\{\s*secrets\.",
+            stripped,
+            re.IGNORECASE
+        ):
+            findings.append({
+                "type": "Potential Secret Exposure",
+                "severity": "HIGH",
+                "line": line_number,
+                "description": (
+                    "A GitHub secret is referenced directly in a "
+                    "shell command. Review quoting and exposure risks."
+                )
+            })
 
-        if match:
-            action_reference = match.group(1)
+        # Detect secrets printed using echo
+        if re.search(r"\becho\s+.*\$\{\{\s*secrets\.", stripped):
+            findings.append({
+                "type": "Possible Secret Printed",
+                "severity": "HIGH",
+                "line": line_number,
+                "description": (
+                    "A possible secret is printed in workflow logs."
+                )
+            })
 
-            if "@" in action_reference:
-                version = action_reference.rsplit("@", 1)[1]
+        # Detect remote script execution
+        if re.search(r"\brun\s*:", stripped) and re.search(
+            r"curl\s+.*\|\s*(?:sh|bash)\b",
+            stripped,
+            re.IGNORECASE
+        ):
+            findings.append({
+                "type": "Unsafe Script Execution",
+                "severity": "HIGH",
+                "line": line_number,
+                "description": (
+                    "A remote script is piped directly into a shell."
+                )
+            })
 
-                if not re.fullmatch(r"[0-9a-fA-F]{40}", version):
-                    findings.append({
-                        "file": str(path),
-                        "line": line_number,
-                        "issue": "GitHub Action is not pinned to a full commit SHA",
-                        "severity": "Medium",
-                        "recommendation": "Pin the action to a verified full 40-character commit SHA."
-                    })
+    return {
+        "scanner": "workflow_scanner",
+        "status": "completed",
+        "total_findings": len(findings),
+        "findings": findings
+    }
 
-    return findings
+
+def scan_workflow_directory(directory):
+    """Scan all YAML workflow files in a directory."""
+
+    root = Path(directory)
+
+    if not root.is_dir():
+        return {
+            "scanner": "workflow_scanner",
+            "status": "error",
+            "findings": [],
+            "message": "Invalid workflow directory."
+        }
+
+    findings = []
+
+    for file_path in root.rglob("*"):
+        if file_path.is_file() and file_path.suffix.lower() in {
+            ".yml", ".yaml"
+        }:
+            result = scan_workflow(file_path)
+
+            if result.get("status") == "completed":
+                findings.extend(result.get("findings", []))
+            else:
+                return result
+
+    return {
+        "scanner": "workflow_scanner",
+        "status": "completed",
+        "total_findings": len(findings),
+        "findings": findings
+    }
