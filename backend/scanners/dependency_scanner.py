@@ -3,6 +3,48 @@ import json
 import subprocess
 import shutil
 from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
+from cvss import CVSS2, CVSS3, CVSS4
+
+def get_vulnerability_severity(vulnerability_id):
+    """
+    Retrieve vulnerability severity from OSV using its CVSS score.
+    """
+
+    url = f"https://api.osv.dev/v1/vulns/{vulnerability_id}"
+
+    try:
+        request = Request(
+            url,
+            headers={"Accept": "application/json"}
+        )
+
+        with urlopen(request, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+
+        for severity_info in data.get("severity", []):
+            vector = severity_info.get("score", "")
+            severity_type = severity_info.get("type", "")
+
+            try:
+                if severity_type == "CVSS_V4":
+                    return CVSS4(vector).severities()[0]
+
+                elif severity_type == "CVSS_V3":
+                    return CVSS3(vector).severities()[0]
+
+                elif severity_type == "CVSS_V2":
+                    return CVSS2(vector).severities()[0]
+
+            except (ValueError, IndexError):
+                continue
+
+        return "UNKNOWN"
+
+    except (HTTPError, URLError, TimeoutError, OSError,
+            json.JSONDecodeError, ValueError):
+        return "UNKNOWN"
 
 
 def scan_dependencies(requirements_file):
@@ -77,7 +119,7 @@ def scan_dependencies(requirements_file):
                     "package": package,
                     "installed_version": version,
                     "vulnerability_id": vulnerability_id,
-                    "severity": "UNKNOWN",
+                    "severity": get_vulnerability_severity(vulnerability_id),
                     "description": vulnerability.get("description", ""),
                     "fixed_versions": vulnerability.get("fix_versions", [])
                 })
