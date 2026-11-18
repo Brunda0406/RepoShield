@@ -279,6 +279,37 @@ function updateDashboardMetrics(data) {
             element.textContent = value;
         }
     });
+    // Update results page severity counts
+    const severityCounts = {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0
+    };
+
+    findings.forEach(item => {
+        const severity = getSeverity(item).toLowerCase();
+
+        if (severityCounts[severity] !== undefined) {
+            severityCounts[severity]++;
+        }
+    });
+
+    const resultMetrics = {
+        resultScore: data.security_score ?? "--",
+        resultCritical: severityCounts.critical,
+        resultHigh: severityCounts.high,
+        resultMedium: severityCounts.medium,
+        resultLow: severityCounts.low
+    };
+
+    Object.entries(resultMetrics).forEach(([id, value]) => {
+        const element = getElement(id);
+
+        if (element) {
+            element.textContent = value;
+        }
+    });
 }
 
 
@@ -532,6 +563,36 @@ if (scanButton) {
             loadReports();
 
             updateDashboardMetrics(data);
+            // Update results page information
+            const successBanner = getElement("scan-success");
+
+            if (successBanner) {
+                successBanner.hidden = false;
+                successBanner.textContent =
+                    data.status === "completed"
+                        ? "Scan completed successfully."
+                        : "Scan completed with scanner errors.";
+            }
+
+            const subtitle = getElement("results-subtitle");
+
+            if (subtitle) {
+                subtitle.textContent =
+                    file.name + " · " + findings.length + " findings";
+            }
+
+            // Update reports summary
+            const reportCount = getElement("reportCount");
+            const repositoryCount = getElement("repositoryCount");
+
+            if (reportCount) {
+                reportCount.textContent = scanHistory.length;
+            }
+
+            if (repositoryCount) {
+                repositoryCount.textContent =
+                    new Set(scanHistory.map(scan => scan.repository)).size;
+            }
 
             if (status) {
                 status.textContent =
