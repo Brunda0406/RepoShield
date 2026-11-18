@@ -1,4 +1,5 @@
 
+from backend.database import initialize_database
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.upload import router as upload_router
@@ -8,6 +9,9 @@ app = FastAPI(
     description="Automated Repository Security Scanner",
     version="1.0.0"
 )
+@app.on_event("startup")
+def startup_event():
+    initialize_database()
 
 # Allow the frontend to communicate with the backend
 app.add_middleware(
