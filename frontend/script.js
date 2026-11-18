@@ -1,3 +1,4 @@
+
 // ==========================================
 // REPOSHIELD - FRONTEND APPLICATION
 // Connected to FastAPI Backend
@@ -6,12 +7,11 @@
 const API_URL = "http://127.0.0.1:8000/scan";
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
-// Actual scan data - starts empty
+// Current scan data
 let findings = [];
 let scanHistory = [];
 let reports = [];
 let currentScan = null;
-
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -36,7 +36,6 @@ function getFindingValue(finding, keys, fallback = "Unknown") {
             return finding[key];
         }
     }
-
     return fallback;
 }
 
@@ -48,24 +47,15 @@ function getIssue(finding) {
 }
 
 function getSeverity(finding) {
-    return String(
-        getFindingValue(finding, ["severity"], "Unknown")
-    );
+    return String(getFindingValue(finding, ["severity"], "Unknown"));
 }
 
 function getFile(finding) {
-    return getFindingValue(
-        finding,
-        ["file", "file_path", "path"]
-    );
+    return getFindingValue(finding, ["file", "file_path", "path"]);
 }
 
 function getLine(finding) {
-    return getFindingValue(
-        finding,
-        ["line", "line_number"],
-        "-"
-    );
+    return getFindingValue(finding, ["line", "line_number"], "-");
 }
 
 function getScanner(finding) {
@@ -76,12 +66,17 @@ function getScanner(finding) {
 }
 
 function severityBadge(severity) {
-    const safeSeverity = escapeHTML(severity);
-    const cssClass = safeSeverity.toLowerCase();
+    const allowed = ["Critical", "High", "Medium", "Low"];
+    const original = String(severity);
+    const cssSeverity = allowed.find(
+        item => item.toLowerCase() === original.toLowerCase()
+    );
+
+    const cssClass = cssSeverity || "Unknown";
 
     return `
         <span class="severity sev-${cssClass}">
-            ${safeSeverity}
+            ${escapeHTML(original)}
         </span>
     `;
 }
@@ -90,6 +85,11 @@ function formatDate(date) {
     return new Date(date).toLocaleString();
 }
 
+function countSeverity(level) {
+    return findings.filter(
+        item => getSeverity(item).toLowerCase() === level.toLowerCase()
+    ).length;
+}
 
 // ==========================================
 // NAVIGATION
@@ -108,7 +108,6 @@ const pageNames = {
 };
 
 function showPage(page) {
-
     document.querySelectorAll(".page").forEach(section => {
         section.classList.remove("active");
     });
@@ -136,27 +135,16 @@ function showPage(page) {
 }
 
 document.addEventListener("click", function(event) {
-
     const navButton = event.target.closest("[data-page]");
-
-    if (navButton) {
-        showPage(navButton.dataset.page);
-    }
+    if (navButton) showPage(navButton.dataset.page);
 
     const goButton = event.target.closest("[data-go]");
-
-    if (goButton) {
-        showPage(goButton.dataset.go);
-    }
+    if (goButton) showPage(goButton.dataset.go);
 
     const findingButton = event.target.closest("[data-finding]");
-
-    if (findingButton) {
-        showPage("finding");
-    }
+    if (findingButton) showPage("finding");
 
     const downloadButton = event.target.closest("[data-download]");
-
     if (downloadButton) {
         downloadReport(
             downloadButton.dataset.download,
@@ -165,15 +153,12 @@ document.addEventListener("click", function(event) {
     }
 });
 
-
 // ==========================================
 // DASHBOARD FINDINGS
 // ==========================================
 
 function loadDashboardFindings() {
-
     const table = getElement("dashboard-findings");
-
     if (!table) return;
 
     if (findings.length === 0) {
@@ -185,34 +170,25 @@ function loadDashboardFindings() {
         return;
     }
 
-    table.innerHTML = findings.slice(0, 4).map(item => {
-
-        return `
-            <tr>
-                <td>${escapeHTML(getIssue(item))}</td>
-                <td>${severityBadge(getSeverity(item))}</td>
-                <td>${escapeHTML(getFile(item))}</td>
-                <td>${escapeHTML(getScanner(item))}</td>
-                <td>
-                    <button class="row-action" data-finding>
-                        View →
-                    </button>
-                </td>
-            </tr>
-        `;
-
-    }).join("");
+    table.innerHTML = findings.slice(0, 4).map(item => `
+        <tr>
+            <td>${escapeHTML(getIssue(item))}</td>
+            <td>${severityBadge(getSeverity(item))}</td>
+            <td>${escapeHTML(getFile(item))}</td>
+            <td>${escapeHTML(getScanner(item))}</td>
+            <td>
+                <button class="row-action" data-finding>View →</button>
+            </td>
+        </tr>
+    `).join("");
 }
-
 
 // ==========================================
 // ALL SCAN RESULTS
 // ==========================================
 
 function loadResults() {
-
     const table = getElement("results-findings");
-
     if (!table) return;
 
     if (findings.length === 0) {
@@ -224,103 +200,52 @@ function loadResults() {
         return;
     }
 
-    table.innerHTML = findings.map(item => {
-
-        return `
-            <tr>
-                <td>${escapeHTML(getIssue(item))}</td>
-                <td>${severityBadge(getSeverity(item))}</td>
-                <td>${escapeHTML(getFile(item))}</td>
-                <td>${escapeHTML(getLine(item))}</td>
-                <td>
-                    <button class="row-action" data-finding>
-                        View details
-                    </button>
-                </td>
-            </tr>
-        `;
-
-    }).join("");
+    table.innerHTML = findings.map(item => `
+        <tr>
+            <td>${escapeHTML(getIssue(item))}</td>
+            <td>${severityBadge(getSeverity(item))}</td>
+            <td>${escapeHTML(getFile(item))}</td>
+            <td>${escapeHTML(getLine(item))}</td>
+            <td>
+                <button class="row-action" data-finding>View details</button>
+            </td>
+        </tr>
+    `).join("");
 }
 
-
 // ==========================================
-// DASHBOARD METRICS
+// DASHBOARD AND RESULTS METRICS
 // ==========================================
 
 function updateDashboardMetrics(data) {
-
     const score = data.security_score ?? "--";
     const total = data.total_findings ?? findings.length;
 
-    const critical = findings.filter(
-        item => getSeverity(item).toLowerCase() === "critical"
-    ).length;
-
-    const high = findings.filter(
-        item => getSeverity(item).toLowerCase() === "high"
-    ).length;
-
-    const metricElements = {
+    const metrics = {
         securityScore: score,
-        "security-score": score,
+        criticalIssues: countSeverity("critical"),
+        highIssues: countSeverity("high"),
         totalFindings: total,
-        "total-findings": total,
-        criticalIssues: critical,
-        "critical-issues": critical,
-        highIssues: high,
-        "high-issues": high
+
+        resultScore: score,
+        resultCritical: countSeverity("critical"),
+        resultHigh: countSeverity("high"),
+        resultMedium: countSeverity("medium"),
+        resultLow: countSeverity("low")
     };
 
-    Object.entries(metricElements).forEach(([id, value]) => {
+    Object.entries(metrics).forEach(([id, value]) => {
         const element = getElement(id);
-
-        if (element) {
-            element.textContent = value;
-        }
-    });
-    // Update results page severity counts
-    const severityCounts = {
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0
-    };
-
-    findings.forEach(item => {
-        const severity = getSeverity(item).toLowerCase();
-
-        if (severityCounts[severity] !== undefined) {
-            severityCounts[severity]++;
-        }
-    });
-
-    const resultMetrics = {
-        resultScore: data.security_score ?? "--",
-        resultCritical: severityCounts.critical,
-        resultHigh: severityCounts.high,
-        resultMedium: severityCounts.medium,
-        resultLow: severityCounts.low
-    };
-
-    Object.entries(resultMetrics).forEach(([id, value]) => {
-        const element = getElement(id);
-
-        if (element) {
-            element.textContent = value;
-        }
+        if (element) element.textContent = value;
     });
 }
-
 
 // ==========================================
 // SCAN HISTORY
 // ==========================================
 
 function loadHistory() {
-
     const container = getElement("recent-history");
-
     if (!container) return;
 
     if (scanHistory.length === 0) {
@@ -330,29 +255,42 @@ function loadHistory() {
         return;
     }
 
-    container.innerHTML = scanHistory.map(scan => {
-
-        return `
-            <div class="history-row">
-                <strong>${escapeHTML(scan.repository)}</strong>
-                <small>${escapeHTML(scan.date)}</small>
-                <span>${scan.total} findings</span>
-                <b>${escapeHTML(scan.score)}</b>
-            </div>
-        `;
-
-    }).join("");
+    container.innerHTML = scanHistory.map(scan => `
+        <div class="history-row">
+            <strong>${escapeHTML(scan.repository)}</strong>
+            <small>${escapeHTML(scan.date)}</small>
+            <span>${scan.total} findings</span>
+            <b>${escapeHTML(scan.score)}</b>
+        </div>
+    `).join("");
 }
-
 
 // ==========================================
 // REPORTS
 // ==========================================
 
+function updateReportSummary() {
+    const reportCount = getElement("reportCount");
+    const repositoryCount = getElement("repositoryCount");
+    const latestScanDate = getElement("latestScanDate");
+
+    if (reportCount) {
+        reportCount.textContent = scanHistory.length;
+    }
+
+    if (repositoryCount) {
+        repositoryCount.textContent =
+            new Set(scanHistory.map(scan => scan.repository)).size;
+    }
+
+    if (latestScanDate) {
+        latestScanDate.textContent =
+            scanHistory.length > 0 ? scanHistory[0].date : "--";
+    }
+}
+
 function loadReports(search = "") {
-
     const table = getElement("reports-table");
-
     if (!table) return;
 
     const filteredReports = reports.filter(report =>
@@ -369,7 +307,6 @@ function loadReports(search = "") {
     }
 
     table.innerHTML = filteredReports.map(report => {
-
         const index = reports.indexOf(report);
 
         return `
@@ -387,7 +324,6 @@ function loadReports(search = "") {
                 </td>
             </tr>
         `;
-
     }).join("");
 }
 
@@ -399,7 +335,6 @@ if (reportSearch) {
     });
 }
 
-
 // ==========================================
 // ZIP FILE UPLOAD
 // ==========================================
@@ -408,7 +343,6 @@ const fileInput = getElement("zip-file");
 const dropZone = getElement("drop-zone");
 
 function showSelectedFile(file) {
-
     if (!file || !fileInput) return;
 
     if (!file.name.toLowerCase().endsWith(".zip")) {
@@ -444,13 +378,11 @@ if (fileInput) {
     });
 }
 
-
 // ==========================================
 // DRAG AND DROP
 // ==========================================
 
 if (dropZone && fileInput) {
-
     dropZone.addEventListener("dragover", function(event) {
         event.preventDefault();
         dropZone.classList.add("dragover");
@@ -461,9 +393,7 @@ if (dropZone && fileInput) {
     });
 
     dropZone.addEventListener("drop", function(event) {
-
         event.preventDefault();
-
         dropZone.classList.remove("dragover");
 
         const file = event.dataTransfer.files[0];
@@ -471,60 +401,50 @@ if (dropZone && fileInput) {
         if (file) {
             showSelectedFile(file);
 
-            // Make the dropped file available to the Scan button
-            const transfer = new DataTransfer();
-            transfer.items.add(file);
-            fileInput.files = transfer.files;
+            if (file.name.toLowerCase().endsWith(".zip") &&
+                file.size <= MAX_FILE_SIZE) {
+                const transfer = new DataTransfer();
+                transfer.items.add(file);
+                fileInput.files = transfer.files;
+            }
         }
     });
 }
 
-
 // ==========================================
-// REAL BACKEND SCAN
+// BACKEND SCAN
 // ==========================================
 
 const scanButton = getElement("scan-button");
 
 if (scanButton) {
-
     scanButton.addEventListener("click", async function() {
-
         const status = getElement("scan-status");
         const file = fileInput?.files[0];
 
         if (!file) {
-            if (status) {
-                status.textContent = "Please select a ZIP file first.";
-            }
+            if (status) status.textContent = "Please select a ZIP file first.";
             return;
         }
 
         if (!file.name.toLowerCase().endsWith(".zip")) {
-            if (status) {
-                status.textContent = "Please upload a ZIP file.";
-            }
+            if (status) status.textContent = "Please upload a ZIP file.";
             return;
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            if (status) {
-                status.textContent = "ZIP file must be 20 MB or smaller.";
-            }
+            if (status) status.textContent = "ZIP file must be 20 MB or smaller.";
             return;
         }
 
         const formData = new FormData();
         formData.append("file", file);
 
-        if (status) {
-            status.textContent = "Scanning repository. Please wait...";
-        }
+        if (status) status.textContent = "Scanning repository. Please wait...";
 
         scanButton.disabled = true;
 
         try {
-
             const response = await fetch(API_URL, {
                 method: "POST",
                 body: formData
@@ -533,15 +453,10 @@ if (scanButton) {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(
-                    data.detail || "Backend scan failed."
-                );
+                throw new Error(data.detail || "Backend scan failed.");
             }
 
-            // Use the actual backend response
-            findings = Array.isArray(data.findings)
-                ? data.findings
-                : [];
+            findings = Array.isArray(data.findings) ? data.findings : [];
 
             currentScan = {
                 repository: file.name,
@@ -553,7 +468,6 @@ if (scanButton) {
                 scannerErrors: data.scanner_errors || []
             };
 
-            // Only record scans that returned a result
             scanHistory.unshift(currentScan);
             reports.unshift(currentScan);
 
@@ -561,9 +475,9 @@ if (scanButton) {
             loadResults();
             loadHistory();
             loadReports();
-
             updateDashboardMetrics(data);
-            // Update results page information
+            updateReportSummary();
+
             const successBanner = getElement("scan-success");
 
             if (successBanner) {
@@ -571,27 +485,14 @@ if (scanButton) {
                 successBanner.textContent =
                     data.status === "completed"
                         ? "Scan completed successfully."
-                        : "Scan completed with scanner errors.";
+                        : "Scan completed with some scanner errors.";
             }
 
             const subtitle = getElement("results-subtitle");
 
             if (subtitle) {
                 subtitle.textContent =
-                    file.name + " · " + findings.length + " findings";
-            }
-
-            // Update reports summary
-            const reportCount = getElement("reportCount");
-            const repositoryCount = getElement("repositoryCount");
-
-            if (reportCount) {
-                reportCount.textContent = scanHistory.length;
-            }
-
-            if (repositoryCount) {
-                repositoryCount.textContent =
-                    new Set(scanHistory.map(scan => scan.repository)).size;
+                    file.name + " · " + currentScan.total + " findings";
             }
 
             if (status) {
@@ -603,32 +504,30 @@ if (scanButton) {
 
             showPage("results");
 
-            console.log("Actual backend scan response:", data);
+            console.log("Backend scan response:", data);
 
         } catch (error) {
-
             console.error("Scan error:", error);
 
             if (status) {
                 status.textContent = "Scan failed: " + error.message;
             }
 
-        } finally {
+            const successBanner = getElement("scan-success");
+            if (successBanner) successBanner.hidden = true;
 
+        } finally {
             scanButton.disabled = false;
         }
     });
 }
-
 
 // ==========================================
 // DOWNLOAD REPORTS
 // ==========================================
 
 function downloadReport(type, index) {
-
     const report = reports[index];
-
     if (!report) return;
 
     const data = {
@@ -642,7 +541,6 @@ function downloadReport(type, index) {
     };
 
     if (type === "json") {
-
         const blob = new Blob(
             [JSON.stringify(data, null, 2)],
             { type: "application/json" }
@@ -653,24 +551,19 @@ function downloadReport(type, index) {
 
         link.href = url;
         link.download = report.repository + "-report.json";
-
         link.click();
 
         URL.revokeObjectURL(url);
-
     } else if (type === "pdf") {
-
         window.print();
     }
 }
 
-
 // ==========================================
-// INITIAL EMPTY DASHBOARD
+// INITIALIZE EMPTY DASHBOARD
 // ==========================================
 
 function initializeDashboard() {
-
     findings = [];
     scanHistory = [];
     reports = [];
@@ -680,11 +573,11 @@ function initializeDashboard() {
     loadResults();
     loadHistory();
     loadReports();
-
     updateDashboardMetrics({
         security_score: "--",
         total_findings: 0
     });
+    updateReportSummary();
 }
 
 initializeDashboard();
