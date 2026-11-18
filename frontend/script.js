@@ -1,141 +1,690 @@
+// ==========================================
+// REPOSHIELD - FRONTEND APPLICATION
+// Connected to FastAPI Backend
+// ==========================================
+
 const API_URL = "http://127.0.0.1:8000/scan";
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
-// Get HTML elements
-const fileInput = document.getElementById("repositoryFile");
-const scanButton = document.getElementById("scanButton");
+// Actual scan data - starts empty
+let findings = [];
+let scanHistory = [];
+let reports = [];
+let currentScan = null;
 
-const scoreElement = document.getElementById("securityScore");
-const findingsCountElement = document.getElementById("totalFindings");
-const statusElement = document.getElementById("status");
-const scanStatusElement = document.getElementById("scanStatus");
-const findingsTable = document.getElementById("findingsTable");
 
-// Display findings in the table
-function displayFindings(findings) {
-    findingsTable.replaceChildren();
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
 
-    if (!findings || findings.length === 0) {
-        const row = document.createElement("tr");
-        const cell = document.createElement("td");
+function getElement(id) {
+    return document.getElementById(id);
+}
 
-        cell.colSpan = 4;
-        cell.textContent = "No security findings detected.";
+function escapeHTML(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
-        row.appendChild(cell);
-        findingsTable.appendChild(row);
+function getFindingValue(finding, keys, fallback = "Unknown") {
+    for (const key of keys) {
+        if (finding[key] !== undefined && finding[key] !== null) {
+            return finding[key];
+        }
+    }
+
+    return fallback;
+}
+
+function getIssue(finding) {
+    return getFindingValue(
+        finding,
+        ["issue", "title", "type", "message", "description"]
+    );
+}
+
+function getSeverity(finding) {
+    return String(
+        getFindingValue(finding, ["severity"], "Unknown")
+    );
+}
+
+function getFile(finding) {
+    return getFindingValue(
+        finding,
+        ["file", "file_path", "path"]
+    );
+}
+
+function getLine(finding) {
+    return getFindingValue(
+        finding,
+        ["line", "line_number"],
+        "-"
+    );
+}
+
+function getScanner(finding) {
+    return getFindingValue(
+        finding,
+        ["scanner", "scanner_name", "source"]
+    );
+}
+
+function severityBadge(severity) {
+    const safeSeverity = escapeHTML(severity);
+    const cssClass = safeSeverity.toLowerCase();
+
+    return `
+        <span class="severity sev-${cssClass}">
+            ${safeSeverity}
+        </span>
+    `;
+}
+
+function formatDate(date) {
+    return new Date(date).toLocaleString();
+}
+
+
+// ==========================================
+// NAVIGATION
+// ==========================================
+
+const pageNames = {
+    dashboard: "Dashboard",
+    scan: "Scan Repository",
+    results: "Vulnerabilities",
+    finding: "Finding details",
+    reports: "Reports",
+    secrets: "Secrets",
+    docker: "Docker Security",
+    github: "GitHub Actions",
+    settings: "Settings"
+};
+
+function showPage(page) {
+
+    document.querySelectorAll(".page").forEach(section => {
+        section.classList.remove("active");
+    });
+
+    const selectedPage = getElement("page-" + page);
+
+    if (!selectedPage) return;
+
+    selectedPage.classList.add("active");
+
+    const breadcrumb = getElement("breadcrumb");
+
+    if (breadcrumb) {
+        breadcrumb.textContent = pageNames[page] || page;
+    }
+
+    document.querySelectorAll(".nav-item").forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.page === page
+        );
+    });
+
+    window.scrollTo(0, 0);
+}
+
+document.addEventListener("click", function(event) {
+
+    const navButton = event.target.closest("[data-page]");
+
+    if (navButton) {
+        showPage(navButton.dataset.page);
+    }
+
+    const goButton = event.target.closest("[data-go]");
+
+    if (goButton) {
+        showPage(goButton.dataset.go);
+    }
+
+    const findingButton = event.target.closest("[data-finding]");
+
+    if (findingButton) {
+        showPage("finding");
+    }
+
+    const downloadButton = event.target.closest("[data-download]");
+
+    if (downloadButton) {
+        downloadReport(
+            downloadButton.dataset.download,
+            Number(downloadButton.dataset.index)
+        );
+    }
+});
+
+
+// ==========================================
+// DASHBOARD FINDINGS
+// ==========================================
+
+function loadDashboardFindings() {
+
+    const table = getElement("dashboard-findings");
+
+    if (!table) return;
+
+    if (findings.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="5">No security findings yet. Scan a repository to get started.</td>
+            </tr>
+        `;
         return;
     }
 
-    findings.forEach((finding) => {
-        const row = document.createElement("tr");
+    table.innerHTML = findings.slice(0, 4).map(item => {
 
-        const values = [
-            finding.type || finding.title || "Unknown finding",
-            finding.scanner || "Unknown",
-            finding.severity || "UNKNOWN",
-            finding.file || finding.file_path || "Not specified"
-        ];
+        return `
+            <tr>
+                <td>${escapeHTML(getIssue(item))}</td>
+                <td>${severityBadge(getSeverity(item))}</td>
+                <td>${escapeHTML(getFile(item))}</td>
+                <td>${escapeHTML(getScanner(item))}</td>
+                <td>
+                    <button class="row-action" data-finding>
+                        View →
+                    </button>
+                </td>
+            </tr>
+        `;
 
-        values.forEach((value) => {
-            const cell = document.createElement("td");
-            cell.textContent = value;
-            row.appendChild(cell);
-        });
+    }).join("");
+}
 
-        findingsTable.appendChild(row);
+
+// ==========================================
+// ALL SCAN RESULTS
+// ==========================================
+
+function loadResults() {
+
+    const table = getElement("results-findings");
+
+    if (!table) return;
+
+    if (findings.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="5">No vulnerabilities found. Upload a repository and run a scan.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = findings.map(item => {
+
+        return `
+            <tr>
+                <td>${escapeHTML(getIssue(item))}</td>
+                <td>${severityBadge(getSeverity(item))}</td>
+                <td>${escapeHTML(getFile(item))}</td>
+                <td>${escapeHTML(getLine(item))}</td>
+                <td>
+                    <button class="row-action" data-finding>
+                        View details
+                    </button>
+                </td>
+            </tr>
+        `;
+
+    }).join("");
+}
+
+
+// ==========================================
+// DASHBOARD METRICS
+// ==========================================
+
+function updateDashboardMetrics(data) {
+
+    const score = data.security_score ?? "--";
+    const total = data.total_findings ?? findings.length;
+
+    const critical = findings.filter(
+        item => getSeverity(item).toLowerCase() === "critical"
+    ).length;
+
+    const high = findings.filter(
+        item => getSeverity(item).toLowerCase() === "high"
+    ).length;
+
+    const metricElements = {
+        securityScore: score,
+        "security-score": score,
+        totalFindings: total,
+        "total-findings": total,
+        criticalIssues: critical,
+        "critical-issues": critical,
+        highIssues: high,
+        "high-issues": high
+    };
+
+    Object.entries(metricElements).forEach(([id, value]) => {
+        const element = getElement(id);
+
+        if (element) {
+            element.textContent = value;
+        }
+    });
+    // Update results page severity counts
+    const severityCounts = {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0
+    };
+
+    findings.forEach(item => {
+        const severity = getSeverity(item).toLowerCase();
+
+        if (severityCounts[severity] !== undefined) {
+            severityCounts[severity]++;
+        }
+    });
+
+    const resultMetrics = {
+        resultScore: data.security_score ?? "--",
+        resultCritical: severityCounts.critical,
+        resultHigh: severityCounts.high,
+        resultMedium: severityCounts.medium,
+        resultLow: severityCounts.low
+    };
+
+    Object.entries(resultMetrics).forEach(([id, value]) => {
+        const element = getElement(id);
+
+        if (element) {
+            element.textContent = value;
+        }
     });
 }
 
-// Scan button functionality
-scanButton.addEventListener("click", async () => {
 
-    const file = fileInput.files[0];
+// ==========================================
+// SCAN HISTORY
+// ==========================================
 
-    // Check whether a file was selected
-    if (!file) {
-        scanStatusElement.textContent = "Please select a ZIP file first.";
+function loadHistory() {
+
+    const container = getElement("recent-history");
+
+    if (!container) return;
+
+    if (scanHistory.length === 0) {
+        container.innerHTML = `
+            <p>No previous scans. Your scan history will appear here.</p>
+        `;
         return;
     }
 
-    // Check file extension
+    container.innerHTML = scanHistory.map(scan => {
+
+        return `
+            <div class="history-row">
+                <strong>${escapeHTML(scan.repository)}</strong>
+                <small>${escapeHTML(scan.date)}</small>
+                <span>${scan.total} findings</span>
+                <b>${escapeHTML(scan.score)}</b>
+            </div>
+        `;
+
+    }).join("");
+}
+
+
+// ==========================================
+// REPORTS
+// ==========================================
+
+function loadReports(search = "") {
+
+    const table = getElement("reports-table");
+
+    if (!table) return;
+
+    const filteredReports = reports.filter(report =>
+        report.repository.toLowerCase().includes(search.toLowerCase())
+    );
+
+    if (filteredReports.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="5">No reports available yet. Complete a scan first.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = filteredReports.map(report => {
+
+        const index = reports.indexOf(report);
+
+        return `
+            <tr>
+                <td>${escapeHTML(report.repository)}</td>
+                <td>${escapeHTML(report.date)}</td>
+                <td>${report.total} findings</td>
+                <td>${escapeHTML(report.score)}</td>
+                <td>
+                    <button class="download-btn"
+                        data-download="json"
+                        data-index="${index}">
+                        Download JSON
+                    </button>
+                </td>
+            </tr>
+        `;
+
+    }).join("");
+}
+
+const reportSearch = getElement("report-search");
+
+if (reportSearch) {
+    reportSearch.addEventListener("input", function() {
+        loadReports(this.value);
+    });
+}
+
+
+// ==========================================
+// ZIP FILE UPLOAD
+// ==========================================
+
+const fileInput = getElement("zip-file");
+const dropZone = getElement("drop-zone");
+
+function showSelectedFile(file) {
+
+    if (!file || !fileInput) return;
+
     if (!file.name.toLowerCase().endsWith(".zip")) {
-        scanStatusElement.textContent = "Only ZIP files are allowed.";
+        alert("Please select a ZIP file.");
+        fileInput.value = "";
         return;
     }
 
-    // Check 20 MB limit
-    if (file.size > 20 * 1024 * 1024) {
-        scanStatusElement.textContent = "File exceeds the 20 MB limit.";
+    if (file.size > MAX_FILE_SIZE) {
+        alert("Maximum ZIP file size is 20 MB.");
+        fileInput.value = "";
         return;
     }
 
-    // Prepare ZIP file for upload
-    const formData = new FormData();
-    formData.append("file", file);
+    const uploadTitle = getElement("upload-title");
+    const selectedFile = getElement("selected-file");
 
-    try {
+    if (uploadTitle) {
+        uploadTitle.textContent = file.name;
+    }
+
+    if (selectedFile) {
+        selectedFile.textContent =
+            file.name + " · " +
+            (file.size / 1024 / 1024).toFixed(2) +
+            " MB · Ready to scan";
+    }
+}
+
+if (fileInput) {
+    fileInput.addEventListener("change", function() {
+        showSelectedFile(this.files[0]);
+    });
+}
+
+
+// ==========================================
+// DRAG AND DROP
+// ==========================================
+
+if (dropZone && fileInput) {
+
+    dropZone.addEventListener("dragover", function(event) {
+        event.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", function() {
+        dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", function(event) {
+
+        event.preventDefault();
+
+        dropZone.classList.remove("dragover");
+
+        const file = event.dataTransfer.files[0];
+
+        if (file) {
+            showSelectedFile(file);
+
+            // Make the dropped file available to the Scan button
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            fileInput.files = transfer.files;
+        }
+    });
+}
+
+
+// ==========================================
+// REAL BACKEND SCAN
+// ==========================================
+
+const scanButton = getElement("scan-button");
+
+if (scanButton) {
+
+    scanButton.addEventListener("click", async function() {
+
+        const status = getElement("scan-status");
+        const file = fileInput?.files[0];
+
+        if (!file) {
+            if (status) {
+                status.textContent = "Please select a ZIP file first.";
+            }
+            return;
+        }
+
+        if (!file.name.toLowerCase().endsWith(".zip")) {
+            if (status) {
+                status.textContent = "Please upload a ZIP file.";
+            }
+            return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            if (status) {
+                status.textContent = "ZIP file must be 20 MB or smaller.";
+            }
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        if (status) {
+            status.textContent = "Scanning repository. Please wait...";
+        }
+
         scanButton.disabled = true;
-        scanButton.textContent = "Scanning...";
-        scanStatusElement.textContent = "Uploading repository and scanning...";
-        statusElement.textContent = "Scanning";
 
-        // Send request to FastAPI
-        const response = await fetch(API_URL, {
-            method: "POST",
-            body: formData
-        });
+        try {
 
-        const result = await response.json();
+            const response = await fetch(API_URL, {
+                method: "POST",
+                body: formData
+            });
 
-        // Handle backend errors
-        if (!response.ok) {
-            throw new Error(
-                result.detail || "Something went wrong during scanning."
-            );
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Backend scan failed."
+                );
+            }
+
+            // Use the actual backend response
+            findings = Array.isArray(data.findings)
+                ? data.findings
+                : [];
+
+            currentScan = {
+                repository: file.name,
+                date: formatDate(new Date()),
+                total: data.total_findings ?? findings.length,
+                score: data.security_score ?? "--",
+                status: data.status,
+                findings: findings,
+                scannerErrors: data.scanner_errors || []
+            };
+
+            // Only record scans that returned a result
+            scanHistory.unshift(currentScan);
+            reports.unshift(currentScan);
+
+            loadDashboardFindings();
+            loadResults();
+            loadHistory();
+            loadReports();
+
+            updateDashboardMetrics(data);
+            // Update results page information
+            const successBanner = getElement("scan-success");
+
+            if (successBanner) {
+                successBanner.hidden = false;
+                successBanner.textContent =
+                    data.status === "completed"
+                        ? "Scan completed successfully."
+                        : "Scan completed with scanner errors.";
+            }
+
+            const subtitle = getElement("results-subtitle");
+
+            if (subtitle) {
+                subtitle.textContent =
+                    file.name + " · " + findings.length + " findings";
+            }
+
+            // Update reports summary
+            const reportCount = getElement("reportCount");
+            const repositoryCount = getElement("repositoryCount");
+
+            if (reportCount) {
+                reportCount.textContent = scanHistory.length;
+            }
+
+            if (repositoryCount) {
+                repositoryCount.textContent =
+                    new Set(scanHistory.map(scan => scan.repository)).size;
+            }
+
+            if (status) {
+                status.textContent =
+                    data.status === "completed"
+                        ? "Scan completed successfully!"
+                        : "Scan completed with some scanner errors.";
+            }
+
+            showPage("results");
+
+            console.log("Actual backend scan response:", data);
+
+        } catch (error) {
+
+            console.error("Scan error:", error);
+
+            if (status) {
+                status.textContent = "Scan failed: " + error.message;
+            }
+
+        } finally {
+
+            scanButton.disabled = false;
         }
+    });
+}
 
-        // Display total findings
-        findingsCountElement.textContent = result.total_findings ?? 0;
 
-        // Display security score
-        scoreElement.textContent =
-            result.security_score === null
-                ? "--"
-                : `${result.security_score}/100`;
+// ==========================================
+// DOWNLOAD REPORTS
+// ==========================================
 
-        // Display scan status
-        statusElement.textContent = result.status;
+function downloadReport(type, index) {
 
-        // Display findings
-        displayFindings(result.findings);
+    const report = reports[index];
 
-        // Handle completed and partial scans
-        if (result.status === "completed") {
-            scanStatusElement.textContent =
-                `Scan completed successfully! Scan ID: ${result.scan_id}`;
-        } else {
-            const errors = (result.scanner_errors || [])
-                .map(error =>
-                    typeof error === "string"
-                        ? error
-                        : error.message || JSON.stringify(error)
-                )
-                .join("; ");
+    if (!report) return;
 
-            scanStatusElement.textContent =
-                `Partial scan completed. Some scanners failed: ${errors}`;
-        }
+    const data = {
+        repository: report.repository,
+        scan_date: report.date,
+        total_findings: report.total,
+        security_score: report.score,
+        status: report.status,
+        findings: report.findings,
+        scanner_errors: report.scannerErrors
+    };
 
-    } catch (error) {
-        console.error("Scan error:", error);
+    if (type === "json") {
 
-        scanStatusElement.textContent =
-            `Error: ${error.message}`;
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "application/json" }
+        );
 
-        statusElement.textContent = "Failed";
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
 
-    } finally {
-        scanButton.disabled = false;
-        scanButton.textContent = "Scan Repository";
+        link.href = url;
+        link.download = report.repository + "-report.json";
+
+        link.click();
+
+        URL.revokeObjectURL(url);
+
+    } else if (type === "pdf") {
+
+        window.print();
     }
-});
+}
+
+
+// ==========================================
+// INITIAL EMPTY DASHBOARD
+// ==========================================
+
+function initializeDashboard() {
+
+    findings = [];
+    scanHistory = [];
+    reports = [];
+    currentScan = null;
+
+    loadDashboardFindings();
+    loadResults();
+    loadHistory();
+    loadReports();
+
+    updateDashboardMetrics({
+        security_score: "--",
+        total_findings: 0
+    });
+}
+
+initializeDashboard();

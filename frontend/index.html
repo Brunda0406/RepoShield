@@ -1,91 +1,372 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RepoShield | Security Scanner</title>
+    <title>RepoShield | Repository Security</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <h2 class="logo">🛡 RepoShield</h2>
+<div class="app-shell">
 
-        <nav>
-            <a href="#" class="nav-link active">Dashboard</a>
-            <a href="#" class="nav-link">Scan Repository</a>
-            <a href="#" class="nav-link">Scan History</a>
-            <a href="#" class="nav-link">Settings</a>
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">⬡</div>
+            <div>
+                <strong>RepoShield</strong>
+                <small>REPOSITORY SECURITY</small>
+            </div>
+        </div>
+
+        <p class="side-label">WORKSPACE</p>
+
+        <nav id="main-nav">
+            <button class="nav-item active" data-page="dashboard">▦ Dashboard</button>
+            <button class="nav-item" data-page="scan">⇧ Scan Repository</button>
+            <button class="nav-item" data-page="results">✳ Vulnerabilities</button>
+            <button class="nav-item" data-page="secrets">⌕ Secrets</button>
+            <button class="nav-item" data-page="docker">⬡ Docker Security</button>
+            <button class="nav-item" data-page="github">⑂ GitHub Actions</button>
+            <button class="nav-item" data-page="reports">▤ Reports</button>
+            <button class="nav-item" data-page="settings">⚙ Settings</button>
         </nav>
+
+        <div class="sidebar-bottom">
+            <div class="safe-card">
+                <strong>⬡ Built for safer shipping</strong>
+                <small>Review findings before you deploy.</small>
+            </div>
+            <div class="workspace-link">
+                ▱ Expo workspace
+                <small>Local repository scanning</small>
+            </div>
+        </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-area">
 
-        <header class="header">
-            <h1>Dashboard</h1>
-            <p>Monitor repository security and identify vulnerabilities.</p>
+        <header class="topbar">
+            <div class="breadcrumbs">
+                Workspace <span>›</span>
+                <strong id="breadcrumb">Dashboard</strong>
+            </div>
+
+            <div class="top-actions">
+                <span class="sample-label">Sample data</span>
+                <span>♧</span>
+                <span class="demo-user">Demo</span>
+            </div>
         </header>
 
-        <!-- Upload Section -->
-        <section class="upload-section">
-            <h2>Scan Your Repository</h2>
-            <p>Upload your repository as a ZIP file to scan for security issues.</p>
+        <div class="content">
 
-            <input type="file" id="repositoryFile" accept=".zip">
-
-            <button id="scanButton">Scan Repository</button>
-
-            <p id="scanStatus"></p>
-        </section>
-
-        <!-- Summary Cards -->
-        <section class="summary-cards">
-
-            <div class="summary-card">
-                <h3>Security Score</h3>
-                <p id="securityScore">--</p>
+            <div class="notice">
+                ⓘ Demo workspace — all repositories, findings and security scores shown are sample data.
             </div>
 
-            <div class="summary-card">
-                <h3>Total Findings</h3>
-                <p id="totalFindings">--</p>
-            </div>
+            <!-- DASHBOARD -->
+            <section class="page active" id="page-dashboard">
 
-            <div class="summary-card">
-                <h3>Scan Status</h3>
-                <p id="status">Not scanned</p>
-            </div>
+                <div class="page-heading">
+                    <div>
+                        <h1>Security Overview</h1>
+                        <p>Understand your repository's security, from code to deployment.</p>
+                    </div>
+                    <button class="primary-btn" data-go="scan">
+                        Scan New Repository
+                    </button>
+                </div>
 
-        </section>
+                <div class="stats-grid">
 
-        <!-- Findings Table -->
-        <section class="findings-section">
-            <h2>Security Findings</h2>
+                    <article class="stat-card">
+                        <div class="stat-top">Security Score</div>
+                        <strong>72 <small>/ 100</small></strong>
+                        <p>+8 points from the previous scan</p>
+                    </article>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Finding</th>
-                        <th>Scanner</th>
-                        <th>Severity</th>
-                        <th>File</th>
-                    </tr>
-                </thead>
+                    <article class="stat-card">
+                        <div class="stat-top">Critical Issues</div>
+                        <strong class="red">2</strong>
+                        <p>Prioritise these findings first</p>
+                    </article>
 
-                <tbody id="findingsTable">
-                    <tr>
-                        <td colspan="4">No scan results available.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+                    <article class="stat-card">
+                        <div class="stat-top">High Issues</div>
+                        <strong class="orange">5</strong>
+                        <p>Review before your next release</p>
+                    </article>
 
+                    <article class="stat-card">
+                        <div class="stat-top">Total Findings</div>
+                        <strong>24</strong>
+                        <p>Across 4 security scanners</p>
+                    </article>
+
+                </div>
+
+                <article class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Recent security findings</h2>
+                            <p>api-service · latest scan</p>
+                        </div>
+                        <button class="outline-btn" data-go="results">
+                            View all 24 findings
+                        </button>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ISSUE</th>
+                                <th>SEVERITY</th>
+                                <th>FILE</th>
+                                <th>SCANNER</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-findings"></tbody>
+                    </table>
+                </article>
+
+                <div class="bottom-grid">
+                    <article class="panel">
+                        <div class="panel-heading">
+                            <h2>Recent scan history</h2>
+                            <button class="text-btn" data-go="reports">View reports</button>
+                        </div>
+                        <div id="recent-history"></div>
+                    </article>
+
+                    <article class="panel">
+                        <h2>Start with the critical issues</h2>
+                        <p>2 findings may expose sensitive data.</p>
+                        <button class="text-btn" data-go="finding">
+                            Review critical findings →
+                        </button>
+                    </article>
+                </div>
+
+            </section>
+
+            <!-- SCAN REPOSITORY -->
+            <section class="page" id="page-scan">
+
+                <h1>Scan Your Repository</h1>
+                <p>Upload a ZIP archive to check your code, secrets and deployment configuration.</p>
+
+                <article class="panel">
+                    <h2>Repository archive</h2>
+                    <p>Choose the repository you want to scan.</p>
+
+                    <label class="drop-zone" id="drop-zone">
+                        <input type="file" id="zip-file" accept=".zip" hidden>
+                        <span class="upload-icon">⇧</span>
+                        <strong id="upload-title">Drag & drop your repository ZIP here</strong>
+                        <small>or browse your computer to choose a file</small>
+                        <span class="browse-btn">Browse Files</span>
+                        <small>Supported format: ZIP · Maximum size: 100 MB</small>
+                    </label>
+
+                    <div id="selected-file" class="selected-file">
+                        api-service.zip · Sample repository
+                    </div>
+
+                    <button class="primary-btn" id="scan-button">
+                        Scan Repository
+                    </button>
+
+                    <p id="scan-status"></p>
+                </article>
+
+                <article class="panel">
+                    <h2>What gets checked?</h2>
+                    <p>Four focused checks. One clear report.</p>
+                    <p>✳ Code vulnerabilities</p>
+                    <p>⌕ Exposed secrets</p>
+                    <p>⬡ Docker security</p>
+                    <p>⑂ GitHub Actions</p>
+                </article>
+
+            </section>
+
+            <!-- SCAN RESULTS -->
+            <section class="page" id="page-results">
+
+                <div class="page-heading">
+                    <div>
+                        <h1>Scan Results</h1>
+                        <p>api-service.zip · 148 files analysed</p>
+                    </div>
+                    <button class="primary-btn" data-go="scan">
+                        Scan New Repository
+                    </button>
+                </div>
+
+                <div class="success-banner">
+                    ✓ Scan completed · 4 of 4 scanners finished
+                </div>
+
+                <div class="results-stats">
+                    <article class="stat-card">
+                        <p>Security Score</p>
+                        <strong>72 / 100</strong>
+                    </article>
+                    <article class="severity-card critical">
+                        <span>Critical</span>
+                        <strong>2</strong>
+                    </article>
+                    <article class="severity-card high">
+                        <span>High</span>
+                        <strong>5</strong>
+                    </article>
+                    <article class="severity-card medium">
+                        <span>Medium</span>
+                        <strong>9</strong>
+                    </article>
+                    <article class="severity-card low">
+                        <span>Low</span>
+                        <strong>8</strong>
+                    </article>
+                </div>
+
+                <article class="panel">
+                    <h2>Security findings</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ISSUE</th>
+                                <th>SEVERITY</th>
+                                <th>FILE</th>
+                                <th>LINE</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-findings"></tbody>
+                    </table>
+                </article>
+
+            </section>
+
+            <!-- FINDING DETAILS -->
+            <section class="page" id="page-finding">
+
+                <button class="back-link" data-go="results">
+                    ← Back to scan results
+                </button>
+
+                <h1>SQL injection in database query</h1>
+                <p>Critical · Potential vulnerability · Review required</p>
+
+                <article class="panel">
+                    <h2>Affected file</h2>
+                    <p>src/routes/users.py · Line 42</p>
+                </article>
+
+                <article class="panel">
+                    <h2>Why this matters</h2>
+                    <p>
+                        User-controlled input is inserted directly into a SQL query.
+                        This may allow unauthorised access to data.
+                    </p>
+                </article>
+
+                <article class="panel">
+                    <h2>Flagged code</h2>
+                    <pre>cursor.execute("SELECT * FROM users WHERE id = '" + user_id)</pre>
+                </article>
+
+                <article class="panel">
+                    <h2>Recommended solution</h2>
+                    <pre>cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))</pre>
+                </article>
+
+                <article class="panel">
+                    <h2>Finding details</h2>
+                    <p>Scanner: Code analysis</p>
+                    <p>Rule: CWE-89 · SQL injection</p>
+                    <p>Repository: api-service.zip</p>
+                </article>
+
+            </section>
+
+            <!-- REPORTS -->
+            <section class="page" id="page-reports">
+
+                <div class="page-heading">
+                    <div>
+                        <h1>Reports</h1>
+                        <p>Review past scans and share security findings with your team.</p>
+                    </div>
+                    <button class="primary-btn" data-go="scan">
+                        Scan New Repository
+                    </button>
+                </div>
+
+                <div class="report-summary">
+                    <div><strong>6</strong><small>completed scans</small></div>
+                    <div><strong>3</strong><small>repositories</small></div>
+                    <div><strong>18 Nov 2026</strong><small>latest scan</small></div>
+                </div>
+
+                <article class="panel">
+                    <h2>Repository scan history</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>REPOSITORY</th>
+                                <th>SCAN DATE</th>
+                                <th>FINDINGS</th>
+                                <th>SECURITY SCORE</th>
+                                <th>DOWNLOAD REPORT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-table"></tbody>
+                    </table>
+                </article>
+
+            </section>
+
+            <!-- OTHER SIDEBAR PAGES -->
+            <section class="page" id="page-secrets">
+                <h1>Secrets</h1>
+                <article class="panel">
+                    <h2>Secrets scanner</h2>
+                    <p>Review detected credentials and sensitive values.</p>
+                </article>
+            </section>
+
+            <section class="page" id="page-docker">
+                <h1>Docker Security</h1>
+                <article class="panel">
+                    <h2>Docker security checks</h2>
+                    <p>Review container configuration risks.</p>
+                </article>
+            </section>
+
+            <section class="page" id="page-github">
+                <h1>GitHub Actions</h1>
+                <article class="panel">
+                    <h2>Workflow checks</h2>
+                    <p>Review CI/CD workflow security.</p>
+                </article>
+            </section>
+
+            <section class="page" id="page-settings">
+                <h1>Settings</h1>
+                <article class="panel">
+                    <h2>Demo workspace</h2>
+                    <p>Workspace preferences.</p>
+                </article>
+            </section>
+
+        </div>
     </main>
+</div>
 
-    <script src="script.js"></script>
-
+<script src="script.js"></script>
 </body>
 </html>
