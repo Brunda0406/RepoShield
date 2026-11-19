@@ -91,6 +91,132 @@ function countSeverity(level) {
     ).length;
 }
 
+
+// ==========================================
+// INDIVIDUAL SCANNER PAGES
+// ==========================================
+
+function updateScannerPage(prefix, scannerNames, data) {
+    const scannerFindings = findings.filter(item =>
+        scannerNames.includes(
+            String(getScanner(item)).toLowerCase()
+        )
+    );
+
+    const relevantErrors = (data?.scanner_errors || []).filter(error =>
+        scannerNames.includes(
+            String(error.scanner).toLowerCase()
+        )
+    );
+
+    const relevantSkipped = (data?.skipped_scanners || []).filter(name =>
+        scannerNames.includes(String(name).toLowerCase())
+    );
+
+    // Update severity counts
+    const counts = {
+        total: scannerFindings.length,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0
+    };
+
+    scannerFindings.forEach(item => {
+        const severity = getSeverity(item).toLowerCase();
+
+        if (Object.prototype.hasOwnProperty.call(counts, severity)) {
+            counts[severity]++;
+        }
+    });
+
+    Object.entries(counts).forEach(([level, value]) => {
+        const element = getElement(`${prefix}-${level}`);
+
+        if (element) {
+            element.textContent = value;
+        }
+    });
+
+    // Display findings
+    const table = getElement(`${prefix}-findings`);
+
+    if (table) {
+        if (scannerFindings.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="5">No findings to display.</td>
+                </tr>
+            `;
+        } else {
+            table.innerHTML = scannerFindings.map(item => `
+                <tr>
+                    <td>${escapeHTML(getIssue(item))}</td>
+                    <td>${severityBadge(getSeverity(item))}</td>
+                    <td>${escapeHTML(getFile(item))}</td>
+                    ${prefix === "docker"
+                        ? `<td>${escapeHTML(getScanner(item))}</td>`
+                        : `<td>${escapeHTML(getLine(item))}</td>`
+                    }
+                </tr>
+            `).join("");
+        }
+    }
+
+    // Display scanner status
+    const statusElement = getElement(`${prefix}-status`);
+
+    if (statusElement) {
+        if (!data) {
+            statusElement.textContent =
+                "Run a repository scan to see findings.";
+        } else if (relevantErrors.length > 0) {
+            statusElement.textContent =
+                "Scanner error: " +
+                relevantErrors.map(error =>
+                    `${error.scanner}: ${error.error}`
+                ).join(" | ");
+        } else if (relevantSkipped.length > 0) {
+            statusElement.textContent =
+                scannerFindings.length +
+                " finding(s) detected. Some scanners were skipped: " +
+                relevantSkipped.join(", ");
+        } else if (scannerFindings.length === 0) {
+            statusElement.textContent =
+                "Scan completed successfully. No findings detected.";
+        } else {
+            statusElement.textContent =
+                scannerFindings.length +
+                " security finding(s) detected.";
+        }
+    }
+}
+
+function updateAllScannerPages(data) {
+
+    // Secret scanner
+    updateScannerPage(
+        "secrets",
+        ["secret scanner"],
+        data
+    );
+
+    // Dockerfile and Docker Compose scanners
+    updateScannerPage(
+        "docker",
+        ["docker scanner", "compose scanner"],
+        data
+    );
+
+    // GitHub Actions workflow scanner
+    updateScannerPage(
+        "github",
+        ["workflow scanner"],
+        data
+    );
+}
+
+
 // ==========================================
 // NAVIGATION
 // ==========================================
@@ -457,6 +583,7 @@ if (scanButton) {
             }
 
             findings = Array.isArray(data.findings) ? data.findings : [];
+            updateAllScannerPages(data);
 
             currentScan = {
                 repository: file.name,
@@ -581,3 +708,4 @@ function initializeDashboard() {
 }
 
 initializeDashboard();
+updateAllScannerPages(null);

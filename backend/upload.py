@@ -139,6 +139,7 @@ async def scan_repository(file: UploadFile = File(...)):
 
                 findings = result["findings"]
                 scanner_errors = result["scanner_errors"]
+                skipped_scanners = result["skipped_scanners"]
 
                 # Do not present an incomplete scan as a clean scan
                 if scanner_errors:
@@ -150,6 +151,7 @@ async def scan_repository(file: UploadFile = File(...)):
                         "total_findings": len(findings),
                         "findings": findings,
                         "scanner_errors": scanner_errors,
+                        "skipped_scanners": skipped_scanners,
                         "scan_id": None
                     }
 
@@ -169,7 +171,8 @@ async def scan_repository(file: UploadFile = File(...)):
                     "total_findings": len(findings),
                     "findings": findings,
                     "scanner_errors": [],
-                    "scan_id": scan_id
+                    "skipped_scanners": skipped_scanners,
+                    "scan_id": scan_id 
                 }
 
     except zipfile.BadZipFile:

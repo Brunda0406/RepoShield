@@ -334,45 +334,224 @@
 
             </section>
 
+           
             <!-- SECRETS -->
             <section class="page" id="page-secrets">
-                <h1>Secrets</h1>
+
+                <div class="page-heading">
+                    <div>
+                        <h1>Secrets Scanner</h1>
+                        <p>Review exposed credentials and sensitive values detected in your repository.</p>
+                    </div>
+                    <button class="outline-btn" data-go="scan">
+                        Scan Repository
+                    </button>
+                </div>
+
+                <div class="results-stats">
+                    <article class="stat-card">
+                        <p>Total Secret Findings</p>
+                        <strong id="secrets-total">0</strong>
+                    </article>
+                    <article class="severity-card critical">
+                        <span>Critical</span>
+                        <strong id="secrets-critical">0</strong>
+                    </article>
+                    <article class="severity-card high">
+                        <span>High</span>
+                        <strong id="secrets-high">0</strong>
+                    </article>
+                    <article class="severity-card medium">
+                        <span>Medium</span>
+                        <strong id="secrets-medium">0</strong>
+                    </article>
+                    <article class="severity-card low">
+                        <span>Low</span>
+                        <strong id="secrets-low">0</strong>
+                    </article>
+                </div>
+
                 <article class="panel">
-                    <h2>Secrets scanner</h2>
-                    <p>Review detected credentials and sensitive values.</p>
+                    <h2>Detected secrets</h2>
+                    <p id="secrets-status">Run a repository scan to see secret findings.</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ISSUE</th>
+                                <th>SEVERITY</th>
+                                <th>FILE</th>
+                                <th>LINE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="secrets-findings"></tbody>
+                    </table>
                 </article>
+
             </section>
 
             <!-- DOCKER -->
             <section class="page" id="page-docker">
-                <h1>Docker Security</h1>
+
+                <div class="page-heading">
+                    <div>
+                        <h1>Docker Security</h1>
+                        <p>Review security risks in Dockerfiles and Docker Compose configurations.</p>
+                    </div>
+                    <button class="outline-btn" data-go="scan">
+                        Scan Repository
+                    </button>
+                </div>
+
+                <div class="results-stats">
+                    <article class="stat-card">
+                        <p>Total Docker Findings</p>
+                        <strong id="docker-total">0</strong>
+                    </article>
+                    <article class="severity-card critical">
+                        <span>Critical</span>
+                        <strong id="docker-critical">0</strong>
+                    </article>
+                    <article class="severity-card high">
+                        <span>High</span>
+                        <strong id="docker-high">0</strong>
+                    </article>
+                    <article class="severity-card medium">
+                        <span>Medium</span>
+                        <strong id="docker-medium">0</strong>
+                    </article>
+                    <article class="severity-card low">
+                        <span>Low</span>
+                        <strong id="docker-low">0</strong>
+                    </article>
+                </div>
+
                 <article class="panel">
-                    <h2>Docker security checks</h2>
-                    <p>Review container configuration risks.</p>
+                    <h2>Docker security findings</h2>
+                    <p id="docker-status">Run a repository scan to see Docker findings.</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ISSUE</th>
+                                <th>SEVERITY</th>
+                                <th>FILE</th>
+                                <th>SCANNER</th>
+                            </tr>
+                        </thead>
+                        <tbody id="docker-findings"></tbody>
+                    </table>
                 </article>
+
             </section>
 
             <!-- GITHUB ACTIONS -->
             <section class="page" id="page-github">
-                <h1>GitHub Actions</h1>
+
+                <div class="page-heading">
+                    <div>
+                        <h1>GitHub Actions Security</h1>
+                        <p>Review security issues detected in GitHub Actions workflow configurations.</p>
+                    </div>
+                    <button class="outline-btn" data-go="scan">
+                        Scan Repository
+                    </button>
+                </div>
+
+                <div class="results-stats">
+                    <article class="stat-card">
+                        <p>Total Workflow Findings</p>
+                        <strong id="github-total">0</strong>
+                    </article>
+                    <article class="severity-card critical">
+                        <span>Critical</span>
+                        <strong id="github-critical">0</strong>
+                    </article>
+                    <article class="severity-card high">
+                        <span>High</span>
+                        <strong id="github-high">0</strong>
+                    </article>
+                    <article class="severity-card medium">
+                        <span>Medium</span>
+                        <strong id="github-medium">0</strong>
+                    </article>
+                    <article class="severity-card low">
+                        <span>Low</span>
+                        <strong id="github-low">0</strong>
+                    </article>
+                </div>
+
                 <article class="panel">
-                    <h2>Workflow checks</h2>
-                    <p>Review CI/CD workflow security.</p>
+                    <h2>Workflow security findings</h2>
+                    <p id="github-status">Run a repository scan to see workflow findings.</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ISSUE</th>
+                                <th>SEVERITY</th>
+                                <th>FILE</th>
+                                <th>LINE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="github-findings"></tbody>
+                    </table>
                 </article>
+
             </section>
 
-            <!-- SETTINGS -->
-            <section class="page" id="page-settings">
-                <h1>Settings</h1>
-                <article class="panel">
-                    <h2>Workspace settings</h2>
-                    <p>RepoShield local workspace preferences.</p>
-                </article>
-            </section>
+           
+<!-- SETTINGS -->
+<section class="page" id="page-settings">
 
+    <div class="page-heading">
+        <div>
+            <h1>Settings</h1>
+            <p>Application information and workspace configuration.</p>
         </div>
-    </main>
-</div>
+    </div>
+
+    <article class="panel">
+        <h2>Application</h2>
+        <p><strong>Application name:</strong> RepoShield</p>
+        <p><strong>Version:</strong> 1.0.0</p>
+        <p><strong>Workspace:</strong> Local repository scanning</p>
+        <p><strong>Backend:</strong> FastAPI</p>
+        <p><strong>Frontend:</strong> HTML, CSS and JavaScript</p>
+    </article>
+
+    <article class="panel">
+        <h2>Scan Configuration</h2>
+        <p><strong>Maximum upload size:</strong> 20 MB</p>
+        <p><strong>Maximum extracted size:</strong> 100 MB</p>
+        <p><strong>Maximum files per scan:</strong> 2,000</p>
+        <p><strong>Supported upload format:</strong> ZIP</p>
+    </article>
+
+    <article class="panel">
+        <h2>Security Scanners</h2>
+        <p>✓ Secret Scanner</p>
+        <p>✓ Dependency Scanner (OSV API)</p>
+        <p>✓ Docker Scanner</p>
+        <p>✓ Docker Compose Scanner</p>
+        <p>✓ GitHub Actions Workflow Scanner</p>
+    </article>
+
+    <article class="panel">
+        <h2>Workspace Navigation</h2>
+        <p>Return to your security overview or start a new repository scan.</p>
+
+        <button class="primary-btn" data-go="dashboard">
+            Back to Dashboard
+        </button>
+
+        <button class="outline-btn" data-go="scan">
+            Scan Repository
+        </button>
+    </article>
+
+</section>
+
 
 <script src="script.js"></script>
 </body>
